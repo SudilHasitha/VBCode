@@ -1,0 +1,359 @@
+
+Sub KikiReport20200207v2()
+'
+' KikiReport20200207v2 Macro
+'
+
+'
+'Variable declaration
+    'Create pivot table for daily revenue
+    Dim PTCacheDailyRevenue As PivotCache
+    Dim PTDR As PivotTable
+    Dim PTCacheWeeklyRevenue As PivotCache
+    Dim PTWR As PivotTable
+    'Get the last row with data
+    Dim lrDailyData As Long
+    Dim lrWeeklyData As Long
+    Dim lrDailyRevenue As Long
+    Dim lrWeeklyRevenue As Long
+    'Get the value of total daily revenue
+    Dim DailyRevenue As Variant
+    Dim WeeklyRevenue As Variant
+    Dim RevenuePercentDaily As Variant
+    Dim RevenuePercentWeekly As Variant
+    Dim TotalRevenue As Variant
+    Dim DailyRevenueShare, GrossRevenueShare, WeeklyRevenueShare, WeeklyRevenueRef, GrossRevenueShareVendor As Variant
+    
+   'Select Kiki_Daily_RawData as active sheet
+    If ActiveSheet.Name <> "Kiki_Daily_RawData" Then
+        Sheets("Kiki_Daily_RawData").Select
+    End If
+   
+    
+    'Select AB1 and rename
+    Range("AB1").Select
+    ActiveCell.FormulaR1C1 = "Date"
+    
+    'Select Y1 and rename
+    Range("Y1").Select
+    ActiveCell.FormulaR1C1 = "State"
+    
+    'Get the number of columns containig data $AB$97002
+    Range("A1").Select
+    lrDailyData = Range("A1").CurrentRegion.Rows.Count
+    
+    'Use text to column and get date
+    Range("E2").Select
+    Range(Selection, Selection.End(xlDown)).Select
+    Selection.TextToColumns Destination:=Range("AB2"), DataType:=xlDelimited, _
+        TextQualifier:=xlDoubleQuote, ConsecutiveDelimiter:=True, Tab:=False, _
+        Semicolon:=False, Comma:=False, Space:=True, Other:=False, FieldInfo _
+        :=Array(Array(1, 1), Array(2, 9), Array(3, 9)), TrailingMinusNumbers:=True
+        
+    
+    ActiveSheet.ListObjects.Add(xlSrcRange, Range("$A$1:$AB$" & lrDailyData), , xlYes).Name _
+        = "Table1"
+    Range("Table1[#All]").Select
+    ActiveSheet.ListObjects("Table1").TableStyle = "TableStyleLight1"
+    
+    'Add new sheet and named
+    Sheets.Add(After:=ActiveSheet).Name = "Daily_Revenue"
+    
+    
+   'Create Pivot table
+   'Create the Cache
+    Set PTCacheDailyRevenue = ActiveWorkbook.PivotCaches.Create(SourceType:=xlDatabase, _
+        SourceData:="Table1")
+    'Select the destination sheet
+    Sheets("Daily_Revenue").Select
+    Cells(3, 1).Select
+    
+    'Create the Pivot table
+    Set PTDR = ActiveSheet.PivotTables.Add(PivotCache:=PTCacheDailyRevenue, _
+        TableDestination:=Range("A3"), TableName:="PivotTable7")
+    
+    ActiveWorkbook.ShowPivotTableFieldList = True
+    
+    'ActiveWorkbook.PivotCaches.Create(SourceType:=xlDatabase, SourceData:= _
+        "Table1", Version:=6).CreatePivotTable TableDestination:="Sheet1!R3C1", _
+        TableName:="PivotTable7", DefaultVersion:=6
+
+    With ActiveSheet.PivotTables("PivotTable7").PivotFields("State")
+        .Orientation = xlPageField
+        .Position = 1
+    End With
+    With ActiveSheet.PivotTables("PivotTable7").PivotFields("Date")
+        .Orientation = xlRowField
+        .Position = 1
+    End With
+    ActiveSheet.PivotTables("PivotTable7").AddDataField ActiveSheet.PivotTables( _
+        "PivotTable7").PivotFields("charged_amount"), "Sum of charged_amount", xlSum
+    ActiveSheet.PivotTables("PivotTable7").PivotFields("State").CurrentPage = _
+        "(All)"
+    With ActiveSheet.PivotTables("PivotTable7").PivotFields("State")
+        .PivotItems("FAILED").Visible = False
+        .PivotItems("INSUFFICIENT BALANCE").Visible = False
+    End With
+    Range("A3").Select
+    ActiveSheet.PivotTables("PivotTable7").CompactLayoutRowHeader = "Date"
+    Range("B3").Select
+    ActiveSheet.PivotTables("PivotTable7").DataPivotField.PivotItems( _
+        "Sum of charged_amount").Caption = "Sum of Daily Charged Amount"
+    ActiveSheet.PivotTables("PivotTable7").PivotFields("State"). _
+        EnableMultiplePageItems = True
+   
+   'Get the total daily revenue and assign to
+    Range("A3").Select
+    lrDailyRevenue = Range("A3").CurrentRegion.Rows.Count
+    Range("B3").Select
+    DailyRevenue = Round(Range("B" & lrDailyRevenue + 2).Value, 2)
+    
+    Debug.Print DailyRevenue
+'''''''''''''''''''
+    Sheets("Kiki_Weekly_RawData").Select
+    
+    'Change the name of column
+    Range("AB1").Select
+    ActiveCell.FormulaR1C1 = "Date"
+    
+    Range("Y1").Select
+    ActiveCell.FormulaR1C1 = "State"
+      
+    Range("E2").Select
+    Range(Selection, Selection.End(xlDown)).Select
+    Selection.TextToColumns Destination:=Range("AB2"), DataType:=xlDelimited, _
+        TextQualifier:=xlDoubleQuote, ConsecutiveDelimiter:=True, Tab:=False, _
+        Semicolon:=False, Comma:=False, Space:=True, Other:=False, FieldInfo _
+        :=Array(Array(1, 1), Array(2, 9), Array(3, 9)), TrailingMinusNumbers:=True
+    
+    Range("A1").Select
+    
+    'Get number of rows with data
+    lrWeeklyData = Range("A1").CurrentRegion.Rows.Count
+    
+    ActiveSheet.ListObjects.Add(xlSrcRange, Range("$A$1:$AB$" & lrWeeklyData), , xlYes).Name _
+        = "Table2"
+    Range("Table2[#All]").Select
+    ActiveSheet.ListObjects("Table2").TableStyle = "TableStyleLight1"
+    
+    'Create Pivot table
+    Sheets.Add(After:=ActiveSheet).Name = "Weekly_Revenue"
+    
+   'Create Pivot table
+   'Create the Cache
+    Set PTCacheWeeklyRevenue = ActiveWorkbook.PivotCaches.Create(SourceType:=xlDatabase, _
+        SourceData:="Table2")
+    'Select the destination sheet
+    Sheets("Weekly_Revenue").Select
+    Cells(3, 1).Select
+    
+    'Create the Pivot table
+    Set PTWR = ActiveSheet.PivotTables.Add(PivotCache:=PTCacheWeeklyRevenue, _
+        TableDestination:=Range("A3"), TableName:="PivotTable8")
+    
+    ActiveWorkbook.ShowPivotTableFieldList = True
+    
+    
+    'ActiveWorkbook.PivotCaches.Create(SourceType:=xlDatabase, SourceData:= _
+        "Table2", Version:=6).CreatePivotTable TableDestination:="Sheet2!R3C1", _
+        TableName:="PivotTable8", DefaultVersion:=6
+    
+    With ActiveSheet.PivotTables("PivotTable8").PivotFields("State")
+        .Orientation = xlPageField
+        .Position = 1
+    End With
+    With ActiveSheet.PivotTables("PivotTable8").PivotFields("Date")
+        .Orientation = xlRowField
+        .Position = 1
+    End With
+    ActiveSheet.PivotTables("PivotTable8").AddDataField ActiveSheet.PivotTables( _
+        "PivotTable8").PivotFields("charged_amount"), "Sum of charged_amount", xlSum
+    
+    Range("A3").Select
+    ActiveSheet.PivotTables("PivotTable8").CompactLayoutRowHeader = "Date"
+    Range("B3").Select
+    ActiveSheet.PivotTables("PivotTable8").DataPivotField.PivotItems( _
+        "Sum of charged_amount").Caption = "Sum of Weekly Charged Amount"
+    Range("B1").Select
+    ActiveSheet.PivotTables("PivotTable8").PivotFields("State").CurrentPage = _
+        "(All)"
+    With ActiveSheet.PivotTables("PivotTable8").PivotFields("State")
+        .PivotItems("FAILED").Visible = False
+        .PivotItems("INSUFFICIENT BALANCE").Visible = False
+    End With
+    ActiveSheet.PivotTables("PivotTable8").PivotFields("State"). _
+        EnableMultiplePageItems = True
+    
+    'Get the total daily revenue and assign to
+    Range("A3").Select
+    lrWeeklyRevenue = Range("A3").CurrentRegion.Rows.Count
+    Range("B3").Select
+    WeeklyRevenue = Round(Range("B" & lrWeeklyRevenue + 2).Value, 2)
+    WeeklyRevenueRef = WeeklyRevenue
+    Debug.Print WeeklyRevenue
+        
+'''''''''''
+    
+    Sheets.Add(After:=ActiveSheet).Name = "Revenue_Report"
+    
+    Sheets("Daily_Revenue").Select
+    
+    Range("A3").Select
+    Range(Selection, Selection.End(xlDown)).Select
+    Range("A3:B" & lrDailyRevenue + 1).Select
+    Selection.Copy
+    
+    Sheets("Revenue_Report").Select
+    Range("A3").Select
+    ActiveSheet.Paste
+    ActiveCell.FormulaR1C1 = "Date"
+    
+    Range("B3").Select
+    ActiveCell.FormulaR1C1 = "Sum of Daily Charge Amount"
+    Range("C3").Select
+    ActiveCell.FormulaR1C1 = "Sum of Weekly Charged Amount"
+    
+    Range("C4").Select
+    ActiveCell.Formula = "=IFERROR(VLOOKUP(Revenue_Report!A4,Weekly_Revenue!$A$4:$B$" & lrWeeklyRevenue + 1 & ",2,0),0)"
+    Range("C4").Select
+    If (lrDailyRevenue > 1) Then
+    Selection.AutoFill Destination:=Range("C4:C" & lrDailyRevenue + 1)
+    Range("C4:C" & lrDailyRevenue + 1).Select
+    End If
+    
+    Range("A3").Select
+    Selection.Copy
+    Range("C3").Select
+    Selection.PasteSpecial Paste:=xlPasteFormats, Operation:=xlNone, _
+        SkipBlanks:=False, Transpose:=False
+    
+    
+    Columns("A:G").Select
+    Columns("A:G").EntireColumn.AutoFit
+    Range("C4").Select
+    
+    ''' Select the final report
+    Sheets("Final_Report").Select
+    TotalRevenue = DailyRevenue + WeeklyRevenue
+    Range("E3").Value = TotalRevenue
+    
+    If (DailyRevenue >= 0) And (DailyRevenue <= 7000000) Then
+        RevenuePercentDaily = 0.75
+    ElseIf (DailyRevenue > 7000000) And (DailyRevenue <= 14000000) Then
+        RevenuePercentDaily = 0.8
+    ElseIf (DailyRevenue > 14000000) And (DailyRevenue <= 140000000) Then
+        RevenuePercentDaily = 0.82
+    Else
+        MsgBox ("Error in Daily revenue")
+    End If
+        
+        
+    If (DailyRevenue >= 0) And (DailyRevenue <= 5000000) Then
+        RevenuePercentDaily = 0.75
+    ElseIf (DailyRevenue > 5000000) And (DailyRevenue <= 10000000) Then
+        RevenuePercentDaily = 0.8
+    ElseIf (DailyRevenue > 10000000) And (DailyRevenue <= 1000000000) Then
+        RevenuePercentDaily = 0.82
+    Else
+        MsgBox ("Error in Weekly revenue")
+    End If
+    
+     DailyRevenueShare = DailyRevenue * RevenuePercentDaily
+     WeeklyRevenueShare = WeeklyRevenueRef * RevenuePercentWeekly
+
+     Range("E10").Value = DailyRevenueShare
+     Range("E11").Select
+     Range("E11").Value = WeeklyRevenueRef
+     
+     GrossRevenueShare = Range("E10").Value + Range("E11").Value
+
+     Range("E14").Select
+     Range("E14").Value = GrossRevenueShare
+     GrossRevenueShareVendor = GrossRevenueShare
+     
+     Range("E16").Select
+     Range("E16").Value = GrossRevenueShareVendor
+     
+     Range("A1").Select
+End Sub
+
+Public Sub PartOne()
+
+   'Select Kiki_Daily_RawData as active sheet
+    If ActiveSheet.Name <> "Kiki_Daily_RawData" Then
+        Sheets("Kiki_Daily_RawData").Select
+    End If
+   
+    
+    'Select AB1 and rename
+    Range("AB1").Select
+    ActiveCell.FormulaR1C1 = "Date"
+    
+    'Select Y1 and rename
+    Range("Y1").Select
+    ActiveCell.FormulaR1C1 = "State"
+    
+    'Get the number of columns containig data $AB$97002
+    Dim lrDailyData As Long
+    Range("A1").Select
+    lrDailyData = Range("A1").CurrentRegion.Rows.Count
+    
+    'Use text to column and get date
+    Range("E2").Select
+    Range(Selection, Selection.End(xlDown)).Select
+    Selection.TextToColumns Destination:=Range("AB2"), DataType:=xlDelimited, _
+        TextQualifier:=xlDoubleQuote, ConsecutiveDelimiter:=True, Tab:=False, _
+        Semicolon:=False, Comma:=False, Space:=True, Other:=False, FieldInfo _
+        :=Array(Array(1, 1), Array(2, 9), Array(3, 9)), TrailingMinusNumbers:=True
+        
+    
+    ActiveSheet.ListObjects.Add(xlSrcRange, Range("$A$1:$AB$" & lrDailyData), , xlYes).Name _
+        = "Table1"
+    Range("Table1[#All]").Select
+    ActiveSheet.ListObjects("Table1").TableStyle = "TableStyleLight1"
+    
+    'Add new sheet and named
+    Sheets.Add(After:=ActiveSheet).Name = "Daily_Revenue"
+    
+    
+   'Create Pivot table
+   'Create pivot table for daily revenue
+    Dim PTCacheDailyRevenue As PivotCache
+    Dim PTDR As PivotTable
+
+   'Create the Cache
+    Set PTCacheDailyRevenue = ActiveWorkbook.PivotCaches.Create(SourceType:=xlDatabase, _
+        SourceData:="Table1")
+    'Select the destination sheet
+    Sheets("Daily_Revenue").Select
+    Cells(3, 1).Select
+    
+    'Create the Pivot table
+    Set PTDR = ActiveSheet.PivotTables.Add(PivotCache:=PTCacheDailyRevenue, _
+        TableDestination:=Range("A3"), TableName:="PivotTable7")
+    
+    ActiveWorkbook.ShowPivotTableFieldList = True
+    
+    'ActiveWorkbook.PivotCaches.Create(SourceType:=xlDatabase, SourceData:= _
+        "Table1", Version:=6).CreatePivotTable TableDestination:="Sheet1!R3C1", _
+        TableName:="PivotTable7", DefaultVersion:=6
+
+    With ActiveSheet.PivotTables("PivotTable7").PivotFields("State")
+        .Orientation = xlPageField
+        .Position = 1
+    End With
+    With ActiveSheet.PivotTables("PivotTable7").PivotFields("Date")
+        .Orientation = xlRowField
+        .Position = 1
+    End With
+    ActiveSheet.PivotTables("PivotTable7").AddDataField ActiveSheet.PivotTables( _
+        "PivotTable7").PivotFields("charged_amount"), "Sum of charged_amount", xlSum
+    ActiveSheet.PivotTables("PivotTable7").PivotFields("State").CurrentPage = _
+        "(All)"
+    With ActiveSheet.PivotTables("PivotTable7").PivotFields("State")
+        .PivotItems("FAILED").Visible = False
+        .PivotItems("INSUFFICIENT BALANCE").Visible = False
+    End With
+    ActiveSheet.PivotTables("PivotTable7").PivotFields("State"). _
+        EnableMultiplePageItems = False
+End Sub
